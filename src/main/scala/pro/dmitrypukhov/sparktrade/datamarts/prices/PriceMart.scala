@@ -5,7 +5,7 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
 
 
 /**
- * Data mart for OHLC data consumers. Raw data from lake will be converted to OHLCV ticks
+ * Data mart for OHLC and level1 ticks data consumers.
  */
 class PriceMart extends Serializable {
   private val spark = SparkSession.active
@@ -21,7 +21,7 @@ class PriceMart extends Serializable {
       .as[Candle]
 
   /**
-   * Intraday candles of asset
+   * Intraday ticks of asset
    */
   def ticks(assetCode: String, date: java.sql.Date): Dataset[Tick] =
     spark.table(Lake.ticksTableName)

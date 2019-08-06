@@ -1,7 +1,5 @@
 package pro.dmitrypukhov.sparktrade.datamarts.prices
 
-import java.time.LocalDateTime
-
 /**
  * Ohlc entity
  */
