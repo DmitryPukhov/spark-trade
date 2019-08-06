@@ -5,7 +5,8 @@
  <ol>
  <li>Acquisition layer reads raw data to lake</li>
  <li>Messaging layer listens raw streams from price providers</li>
-  <li>Ingestion layer listens messaging layer and transforms raw format to speed layer related</li>
+ <li>Ingestion layer listens messaging layer and transforms raw format to speed layer related</li>
+ <li>Ingestion layer persists streaming data from messaging layer to data lake in raw format</li>
  <li>Lambda layer contains of Batch and Speed layers
  <li>Batch layer reads raw data from lake and prepare batch views</li>
  <li>Speed layer listens ingestion layer and prepare speed views</li>
