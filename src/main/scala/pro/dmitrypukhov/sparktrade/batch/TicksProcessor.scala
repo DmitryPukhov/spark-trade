@@ -10,7 +10,7 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
 /**
  * Calculate ticks from raw data for Ticks mart
  */
-class TicksProcessor extends PriceProcessor with Serializable {
+class TicksProcessor extends BaseProcessor with Serializable {
   // Formatters are lazy to avoid NotSerializable exception
   private lazy val finamDateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
   private lazy val finamTickFormatter = DateTimeFormatter.ofPattern("HHmmss")

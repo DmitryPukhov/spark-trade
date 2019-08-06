@@ -4,9 +4,9 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import pro.dmitrypukhov.sparktrade.datamarts.prices.PriceMart
 import pro.dmitrypukhov.sparktrade.acquisition.FinamImport
 import pro.dmitrypukhov.sparktrade.batch.{CandlesProcessor, TicksProcessor}
+import pro.dmitrypukhov.sparktrade.ingestion.{CandleIngester, TicksIngester}
 import pro.dmitrypukhov.sparktrade.storage.Lake
 
 import scala.collection.JavaConverters._
@@ -41,11 +41,13 @@ object Main extends App {
       .append(configLogMsg)
     log.info(header.toString)
 
+    // Load spark conf from from scala typesafe config
+    val sparkConf = new SparkConf()
+    sparkConf.setAll(configMap)
+
     // Create spark session
     SparkSession.builder().config(
-      // Load spark conf from from scala typesafe config
-      new SparkConf()
-        .setAll(configMap))
+      sparkConf)
       .enableHiveSupport()
       .getOrCreate()
 
@@ -53,23 +55,53 @@ object Main extends App {
     Lake.init()
   }
 
+  /**
+   * Exec Acquisition Layer jobs. Import raw data into Lake.
+   */
+  def execAquisition() {
+    // Import
+    new FinamImport().importCandles()
+    new FinamImport().importTicks()
+  }
+
+  /**
+   * Start Ingestion Layer jobs. Start ingestion layer streamings
+   */
+  def ingest(): Unit = {
+    // This command starts streaming raw data into Lake for Batch Layer.
+    // Streaming for Speed layer is initialized, but will be started later by Speed Layer.
+    new CandleIngester().start()
+    new TicksIngester().start().awaitTermination()
+  }
+
+  /**
+   * Exec Batch Layer jobs. Recalculate batch views for Data Marts.
+   */
+  def execBatch(): Unit = {
+    // Batch processing
+    new CandlesProcessor().process()
+    new TicksProcessor().process()
+  }
+
   //////////////////////////////////////////////////////////////////////////////////
   ////////////////////// Main  /////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////
+
+  // Configure and create Spark session
   initSpark()
 
-  //  // Import
-  new FinamImport().importCandles()
-  new FinamImport().importTicks()
+  // Acquisition Layer. Import raw data
+  //execAquisition()
+
+  // Ingestion Layer.
+  ingest()
 
   // Batch processing
-  new CandlesProcessor().process()
-  new TicksProcessor().process()
+  //execBatch()
 
-
-  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
-  candles.show()
+  // Querying data mart
+  //  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
+  //  candles.show()
 
   println("Completed")
-
 }

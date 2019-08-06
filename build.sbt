@@ -15,4 +15,5 @@ libraryDependencies ++= Seq(
 // Spark related
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.4.3"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.4.3"
+libraryDependencies += "org.apache.spark" %% "spark-streaming" % "2.4.3"
 libraryDependencies += "org.apache.spark" %% s"spark-hive" % "2.4.3" //% "provided"

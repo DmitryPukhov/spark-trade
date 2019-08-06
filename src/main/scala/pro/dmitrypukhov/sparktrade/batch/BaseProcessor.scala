@@ -8,7 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 /**
  * Common logic for ticks and candles price processing
  */
-trait PriceProcessor {
+trait BaseProcessor {
   protected val spark: SparkSession = SparkSession.active
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 

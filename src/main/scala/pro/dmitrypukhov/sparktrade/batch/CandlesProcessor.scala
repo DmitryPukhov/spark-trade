@@ -10,7 +10,7 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
 /**
  * Calculate candles from raw data for Candle mart
  */
-class CandlesProcessor extends PriceProcessor with Serializable {
+class CandlesProcessor extends BaseProcessor with Serializable {
   // Formatters are lazy to avoid NotSerializable exception
   private lazy val finamDateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
 
