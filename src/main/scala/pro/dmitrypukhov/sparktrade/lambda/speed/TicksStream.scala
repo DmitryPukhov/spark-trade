@@ -3,13 +3,13 @@ package pro.dmitrypukhov.sparktrade.lambda.speed
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
-import pro.dmitrypukhov.sparktrade.datamarts.prices.Candle
+import pro.dmitrypukhov.sparktrade.datamarts.prices.Tick
 import pro.dmitrypukhov.sparktrade.lambda.FinamEntityConverter
 
 /**
- * Speed layer. Processing candles.
+ * Speed layer. Processing ticks.
  */
-class CandlesStream {
+class TicksStream {
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
   protected val config: Config = ConfigFactory.load()
   protected val spark: SparkSession = SparkSession.active
@@ -17,11 +17,11 @@ class CandlesStream {
   import spark.implicits._
 
   /**
-   * Create stream, transform entities from raw to Candles
+   * Create stream, transform entities from raw to Ticks
    */
-  def process(df: DataFrame): Dataset[Candle] = {
-    log.info("Speed layer. Start Candles stream.")
+  def process(df: DataFrame): Dataset[Tick] = {
+    log.info("Speed layer. Start Ticks stream.")
     val converter = new FinamEntityConverter
-    df.map(converter.asCandle)
+    df.map(converter.asTick)
   }
 }

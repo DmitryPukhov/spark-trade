@@ -1,6 +1,7 @@
 package pro.dmitrypukhov.sparktrade.ingestion
 
 import java.nio.file.Paths
+
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.streaming.{DataStreamWriter, StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
@@ -54,6 +55,9 @@ trait BaseIngester {
       .foreachBatch((df: DataFrame, n: Long) => persistBatch(df, dstDir, n))
   }
 
+  /**
+   * Persist current batch from stream to data lake in raw format
+   */
   private def persistBatch(df: DataFrame, dstDir: String, num: Long): Unit = {
     val dstDirWithNum = Paths.get(dstDir, num.toString).toString
     log.trace(s"Persisting batch $num to $dstDirWithNum")

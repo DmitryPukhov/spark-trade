@@ -3,11 +3,12 @@ package pro.dmitrypukhov.sparktrade
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.streaming.Trigger
 import org.slf4j.LoggerFactory
 import pro.dmitrypukhov.sparktrade.acquisition.FinamImport
-import pro.dmitrypukhov.sparktrade.datamarts.prices.PriceMart
 import pro.dmitrypukhov.sparktrade.ingestion.{CandleIngester, TicksIngester}
 import pro.dmitrypukhov.sparktrade.lambda.batch.{CandlesProcessor, TicksProcessor}
+import pro.dmitrypukhov.sparktrade.lambda.speed.{CandlesStream, TicksStream}
 import pro.dmitrypukhov.sparktrade.storage.Lake
 
 import scala.collection.JavaConverters._
@@ -84,6 +85,32 @@ object Main extends App {
     new TicksProcessor().process()
   }
 
+  /**
+   * Run speed layer streaming
+   */
+  def runSpeed(): Unit = {
+    // Source stream from Ingestion Layer
+    val candlesSrc = new CandleIngester().stream
+    // Create candles stream of Speed Layer
+    val candles = new CandlesStream().process(candlesSrc)
+    candles
+      .writeStream
+      .format("console")
+      .start()
+      //.awaitTermination(3000)
+
+    // Source stream from Ingestion Layer
+    val ticksSrc = new TicksIngester().stream
+    // Create ticks stream of Speed Layer
+    val ticks = new TicksStream().process(ticksSrc)
+    ticks
+      .writeStream
+      .format("console")
+      .start()
+      .awaitTermination(5000)
+
+  }
+
   //////////////////////////////////////////////////////////////////////////////////
   ////////////////////// Main  /////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////
@@ -98,11 +125,12 @@ object Main extends App {
   //ingest()
 
   // Batch processing
-  execBatch()
+  //execBatch()
+  runSpeed()
 
   // Querying data mart
-  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
-  candles.show()
+  //  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
+  //  candles.show()
 
   println("Completed")
 }
