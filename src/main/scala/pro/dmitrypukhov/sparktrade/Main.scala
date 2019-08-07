@@ -5,8 +5,9 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import pro.dmitrypukhov.sparktrade.acquisition.FinamImport
-import pro.dmitrypukhov.sparktrade.batch.{CandlesProcessor, TicksProcessor}
+import pro.dmitrypukhov.sparktrade.datamarts.prices.PriceMart
 import pro.dmitrypukhov.sparktrade.ingestion.{CandleIngester, TicksIngester}
+import pro.dmitrypukhov.sparktrade.lambda.batch.{CandlesProcessor, TicksProcessor}
 import pro.dmitrypukhov.sparktrade.storage.Lake
 
 import scala.collection.JavaConverters._
@@ -91,17 +92,17 @@ object Main extends App {
   initSpark()
 
   // Acquisition Layer. Import raw data
-  //execAquisition()
+  execAquisition()
 
   // Ingestion Layer.
-  ingest()
+  //ingest()
 
   // Batch processing
-  //execBatch()
+  execBatch()
 
   // Querying data mart
-  //  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
-  //  candles.show()
+  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
+  candles.show()
 
   println("Completed")
 }

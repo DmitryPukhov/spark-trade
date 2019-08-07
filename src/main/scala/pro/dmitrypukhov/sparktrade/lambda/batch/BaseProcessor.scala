@@ -1,9 +1,10 @@
-package pro.dmitrypukhov.sparktrade.batch
+package pro.dmitrypukhov.sparktrade.lambda.batch
 
 import org.apache.spark.sql.catalyst.ScalaReflection.universe.TypeTag
 import org.apache.spark.sql.functions.to_date
 import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
+import pro.dmitrypukhov.sparktrade.lambda.FinamEntityConverter
 
 /**
  * Common logic for ticks and candles price processing
@@ -11,6 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 trait BaseProcessor {
   protected val spark: SparkSession = SparkSession.active
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
+  protected val converter:FinamEntityConverter = new FinamEntityConverter()
 
   import spark.implicits._
 
