@@ -92,7 +92,7 @@ object Main extends App {
   initSpark()
 
   // Acquisition Layer. Import raw data
-  execAquisition()
+  //execAquisition()
 
   // Ingestion Layer.
   //ingest()
