@@ -8,6 +8,6 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
  */
 class TicksProcessor extends BaseProcessor with Serializable {
   def process(): Unit =
-    super.process[Tick](Lake.rawFinamTicksDir + "/*.csv", Lake.ticksTableName, converter.asTick, "ticks")
+    super.prepare[Tick](Lake.rawFinamTicksDir + "/*.csv", Lake.ticksTableName, converter.asTick, "ticks")
 
 }

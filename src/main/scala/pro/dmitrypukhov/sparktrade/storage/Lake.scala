@@ -1,16 +1,16 @@
 package pro.dmitrypukhov.sparktrade.storage
 
 import java.nio.file.Paths
+
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.SparkSession
-import org.slf4j.LoggerFactory
 
 /**
  *
  * Storage layer. Data lake configuration: locations, tables.
  */
-object Lake extends Serializable {
-  private val log = LoggerFactory.getLogger(this.getClass)
+object Lake extends Serializable with LazyLogging {
   private val spark = SparkSession.active
   private lazy val config = ConfigFactory.load()
   private val lakeRootDir = config.getString("sparktrade.storage.lake.root.dir")
@@ -40,7 +40,7 @@ object Lake extends Serializable {
    * Create initial datalake if started from scratch
    */
   def init(): Unit = {
-    log.info("Init data lake")
+    logger.info("Init data lake")
     spark.sql(s"CREATE DATABASE IF NOT EXISTS $dbName")
   }
 

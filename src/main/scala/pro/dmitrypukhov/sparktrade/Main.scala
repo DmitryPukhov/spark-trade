@@ -1,10 +1,9 @@
 package pro.dmitrypukhov.sparktrade
 
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.streaming.Trigger
-import org.slf4j.LoggerFactory
 import pro.dmitrypukhov.sparktrade.acquisition.FinamImport
 import pro.dmitrypukhov.sparktrade.ingestion.{CandleIngester, TicksIngester}
 import pro.dmitrypukhov.sparktrade.lambda.batch.{CandlesProcessor, TicksProcessor}
@@ -28,8 +27,8 @@ import scala.collection.JavaConverters._
  * 8. Datamarts are facades and combine data from speed and batch views
  *
  */
-object Main extends App {
-  private val log = LoggerFactory.getLogger(this.getClass)
+object Main extends App with LazyLogging {
+
   private val config = ConfigFactory.load()
 
   private def initSpark(): Unit = {
@@ -41,7 +40,7 @@ object Main extends App {
         "--- Config:\n" +
         "----------------------------------------------------------\n")
       .append(configLogMsg)
-    log.info(header.toString)
+    logger.info(header.toString)
 
     // Load spark conf from from scala typesafe config
     val sparkConf = new SparkConf()
@@ -119,14 +118,14 @@ object Main extends App {
   initSpark()
 
   // Acquisition Layer. Import raw data
-  //execAquisition()
+  execAquisition()
 
   // Ingestion Layer.
   //ingest()
 
   // Batch processing
-  //execBatch()
-  runSpeed()
+  execBatch()
+  //runSpeed()
 
   // Querying data mart
   //  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))

@@ -1,9 +1,8 @@
 package pro.dmitrypukhov.sparktrade.acquisition
 
-import java.nio.file.Paths
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.slf4j.LoggerFactory
 import pro.dmitrypukhov.sparktrade.storage.Lake
 
 
@@ -11,8 +10,7 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
  * Acquisition layer. Reads the data from external csv file provided by Finam.
  * For development purpose. Production version should load from network.
  **/
-class FinamImport extends Serializable {
-  private val log = LoggerFactory.getLogger(this.getClass)
+class FinamImport extends LazyLogging with Serializable {
   private val spark = SparkSession.active
   private val config = ConfigFactory.load()
 
@@ -21,8 +19,8 @@ class FinamImport extends Serializable {
    */
   def importCandles(): Unit = {
     val src = config.getString("sparktrade.acquisition.finam.candles.src")
-    val fileName = Paths.get(src).getFileName.toString
-    val dstDir = Paths.get(Lake.rawFinamCandlesDir, fileName).toString
+    val dstDir = Lake.rawFinamCandlesDir
+
     importAny(src, dstDir, "candles")
   }
 
@@ -31,22 +29,20 @@ class FinamImport extends Serializable {
    */
   def importTicks(): Unit = {
     val src = config.getString("sparktrade.acquisition.finam.ticks.src")
-    val fileName = Paths.get(src).getFileName.toString
-    val dstDir = Paths.get(Lake.rawFinamTicksDir, fileName).toString
-    importAny(src, dstDir, "ticks")
+    importAny(src, Lake.rawFinamTicksDir, "ticks")
   }
 
   private def importAny(src: String, dstDir: String, tag: String): Unit = {
-    log.info(s"Acquisition layer: $tag. Importing data from $src")
+    logger.info(s"Acquisition layer: $tag. Importing data from $src")
     // Read from input
     val df = spark.read
       .option("header", "true")
       .csv(src)
 
     // Write to lake preserving raw format
-    log.info(s"Acquisition layer:$tag. Reading from source $src to data lake $dstDir")
+    logger.info(s"Acquisition layer:$tag. Reading from source $src to data lake $dstDir")
     // Csv contains data in name, so no lost existing data, overwrite the whole day
     df.write.mode(SaveMode.Overwrite).option("header", "true").csv(dstDir)
-    log.info(s"Acquisition layer. Imported from $src to $dstDir")
+    logger.info(s"Acquisition layer. Imported from $src to $dstDir")
   }
 }

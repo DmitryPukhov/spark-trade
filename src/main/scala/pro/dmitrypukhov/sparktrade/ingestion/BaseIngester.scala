@@ -3,15 +3,14 @@ package pro.dmitrypukhov.sparktrade.ingestion
 import java.nio.file.Paths
 
 import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.streaming.{DataStreamWriter, StreamingQuery, Trigger}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.slf4j.{Logger, LoggerFactory}
 
 /**
  * Common logic for Price stream: pass to Speed layer and persist to Lake in parallel
  */
-trait BaseIngester {
-  protected val log: Logger = LoggerFactory.getLogger(this.getClass)
+trait BaseIngester extends LazyLogging {
   protected val config: Config = ConfigFactory.load()
   protected val spark: SparkSession = SparkSession.active
 
@@ -30,7 +29,7 @@ trait BaseIngester {
    */
   protected def createStream(loadPath: String, tag: String): DataFrame = {
     //val loadPath = config.getString("sparktrade.ingestion.candles.load.path")
-    log.info(s"Ingestion layer. Init $tag stream for speed layer. Source: $loadPath")
+    logger.info(s"Ingestion layer. Init $tag stream for speed layer. Source: $loadPath")
     spark.readStream
       .option("header", value = true)
       .format("csv")
@@ -42,7 +41,7 @@ trait BaseIngester {
    */
   protected def createPersistingStream(srcDir: String, dstDir: String, tag: String): DataStreamWriter[Row] = {
     val interval = config.getString("sparktrade.ingestion.lake.persist.interval")
-    log.info(s"Ingestion layer. Init $tag persisting stream with interval $interval. Source:$srcDir")
+    logger.info(s"Ingestion layer. Init $tag persisting stream with interval $interval. Source:$srcDir")
 
     // For each batch in stream save it to Hive table
     spark.readStream
@@ -60,7 +59,7 @@ trait BaseIngester {
    */
   private def persistBatch(df: DataFrame, dstDir: String, num: Long): Unit = {
     val dstDirWithNum = Paths.get(dstDir, num.toString).toString
-    log.trace(s"Persisting batch $num to $dstDirWithNum")
+    logger.trace(s"Persisting batch $num to $dstDirWithNum")
     df.write.mode(SaveMode.Overwrite).format("csv").csv(dstDirWithNum)
   }
 
