@@ -1,14 +1,10 @@
 package pro.dmitrypukhov.sparktrade.lambda.batch
 
-//import org.apache.spark.ml.Pipeline
-//import org.apache.spark.ml.feature.{StandardScaler, VectorAssembler}
-
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions.{lag, _}
 import pro.dmitrypukhov.sparktrade.datamarts.prices.Candle
 import pro.dmitrypukhov.sparktrade.storage.Lake
-//import org.apache.spark.sql.functions._
-//import org.apache.spark.sql.expressions.Window
-//import org.apache.spark.sql.expressions.Window
-//import org.apache.spark.sql.functions.{coalesce, datediff, lag, lit, min, sum, to_date}
 
 
 /**
@@ -16,25 +12,39 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
  */
 class CandlesProcessor extends BaseProcessor with Serializable {
   /**
+   * Time window size in bars
+   */
+  val windowSize = 5
+
+  /**
+   * For value columns add delta from previous value
+   */
+  private def toDiff(df: DataFrame) = {
+    // Value columns
+    val columns = Seq("open", "high", "low", "close", "vol")
+
+    val timeWindow = Window
+      .partitionBy("assetCode")
+      .orderBy("datetime")
+    val lagSize = 1
+    columns.foldLeft[DataFrame](df)((df, colName: String) => {
+      // Replace value column with diff from prev value
+      val tmpName = s"${colName}_diff_tmp"
+      df.withColumn(tmpName, col(colName) - lag(colName, lagSize).over(timeWindow))
+        .drop(colName)
+        .withColumnRenamed(tmpName, colName)
+    })
+  }
+
+  /**
    * Read raw data from lake, transform to Candle entity, save to candles table.
    */
   def process(): Unit = {
-    // Read raw data from lake, transform to Candle entity, save to candles table.
+    // Transform raw data to candles
     val candles = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
-    //val candles = super.prepare[Candle](Lake.rawFinamCandlesDir , Lake.candlesTableName, converter.asCandle, "candles")
-    candles.show(false)
-//    val timeWindow = Window.partitionBy("assetCode").orderBy("datetime")
-//
-//    Window.partitionBy("")
-//    candles.groupBy("datetime").avg("close")
-//    candles.groupBy(window("datetime","1 second","bb"))
-//
-//    val assembler = new VectorAssembler()
-//      .setInputCols(Array("datetime","open", "high", "low", "close"))
-//      .setOutputCol("")
-////    val scaler = new StandardScaler()
-////      .setInputCol(Array("open", "high", "low", "close"))
-//    val pipeline = new Pipeline()
-
+    // Convert values to diff from previous value
+    val withDiff = toDiff(candles.toDF())
+    withDiff.show(false)
+    // Todo: ... complete the code
   }
 }

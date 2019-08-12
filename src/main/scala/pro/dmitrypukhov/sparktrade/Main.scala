@@ -5,6 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import pro.dmitrypukhov.sparktrade.acquisition.FinamImport
+import pro.dmitrypukhov.sparktrade.datamarts.prices.PriceMart
 import pro.dmitrypukhov.sparktrade.ingestion.{CandleIngester, TicksIngester}
 import pro.dmitrypukhov.sparktrade.lambda.batch.{CandlesProcessor, TicksProcessor}
 import pro.dmitrypukhov.sparktrade.lambda.speed.{CandlesStream, TicksStream}
@@ -72,7 +73,7 @@ object Main extends App with LazyLogging {
     // This command starts streaming raw data into Lake for Batch Layer.
     // Streaming for Speed layer is initialized, but will be started later by Speed Layer.
     new CandleIngester().start()
-    new TicksIngester().start().awaitTermination()
+    new TicksIngester().start()
   }
 
   /**
@@ -121,15 +122,15 @@ object Main extends App with LazyLogging {
   execAquisition()
 
   // Ingestion Layer.
-  //ingest()
+  ingest()
 
   // Batch processing
   execBatch()
   //runSpeed()
 
   // Querying data mart
-  //  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
-  //  candles.show()
+  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
+  candles.show()
 
   println("Completed")
 }
