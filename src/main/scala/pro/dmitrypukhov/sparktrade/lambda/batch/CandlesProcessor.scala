@@ -27,8 +27,8 @@ class CandlesProcessor extends BaseProcessor with Serializable {
       .partitionBy("assetCode")
       .orderBy("datetime")
     val lagSize = 1
+    // For each value column replace value with diff from prev
     columns.foldLeft[DataFrame](df)((df, colName: String) => {
-      // Replace value column with diff from prev value
       val tmpName = s"${colName}_diff_tmp"
       df.withColumn(tmpName, col(colName) - lag(colName, lagSize).over(timeWindow))
         .drop(colName)
