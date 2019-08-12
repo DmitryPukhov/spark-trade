@@ -27,6 +27,7 @@ trait BaseProcessor extends LazyLogging {
       .csv(rawSrc)
       .map(convert)
       .withColumn("date", to_date($"datetime"))
+      .orderBy("datetime")
 
     // Save to candles table, partitioned by asset and time
     logger.info(s"Writing $tag to $tableName")

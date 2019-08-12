@@ -126,7 +126,6 @@ object Main extends App with LazyLogging {
 
   // Batch processing
   execBatch()
-  //runSpeed()
 
   // Querying data mart
   val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
