@@ -1,5 +1,7 @@
 package pro.dmitrypukhov.sparktrade.lambda.batch
 
+import org.apache.spark.ml.feature.StandardScaler
+import org.apache.spark.ml.tuning.{CrossValidator, TrainValidationSplit}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{lag, _}
@@ -27,8 +29,9 @@ class CandlesProcessor extends BaseProcessor with Serializable {
       .partitionBy("assetCode")
       .orderBy("datetime")
     val lagSize = 1
-    // For each value column replace value with diff from prev
-    columns.foldLeft[DataFrame](df)((df, colName: String) => {
+    // For each value column replace value with diff from prev.
+    // Use fold left
+    columns./:[DataFrame](df)((df, colName: String) => {
       val tmpName = s"${colName}_diff_tmp"
       df.withColumn(tmpName, col(colName) - lag(colName, lagSize).over(timeWindow))
         .drop(colName)
@@ -43,8 +46,10 @@ class CandlesProcessor extends BaseProcessor with Serializable {
     // Transform raw data to candles
     val candles = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
     // Convert values to diff from previous value
+    // Not sure it is better to use normalized diffs or just price/volume values
     val withDiff = toDiff(candles.toDF())
-    withDiff.show(false)
+
+
     // Todo: ... complete the code
   }
 }
