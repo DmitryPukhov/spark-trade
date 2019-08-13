@@ -119,17 +119,21 @@ object Main extends App with LazyLogging {
   initSpark()
 
   // Acquisition Layer. Import raw data
-  execAquisition()
+  //execAquisition()
 
   // Ingestion Layer.
-  ingest()
+  //ingest()
 
   // Batch processing
-  execBatch()
+  //execBatch()
+  //runSpeed()
+
+  // Experimental call
+  new CandlesProcessor().predict()
 
   // Querying data mart
-  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
-  candles.show()
+//  val candles = new PriceMart().candles("RI.RTSI", java.sql.Date.valueOf("2018-01-30"))
+//  candles.show()
 
   println("Completed")
 }

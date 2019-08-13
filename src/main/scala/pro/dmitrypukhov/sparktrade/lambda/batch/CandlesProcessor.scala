@@ -1,7 +1,7 @@
 package pro.dmitrypukhov.sparktrade.lambda.batch
 
 import org.apache.spark.ml.{Pipeline, PipelineModel, PipelineStage, Predictor}
-import org.apache.spark.ml.feature.{OneHotEncoderEstimator, StandardScaler, StringIndexer, VectorAssembler}
+import org.apache.spark.ml.feature.{Normalizer, OneHotEncoderEstimator, StandardScaler, StringIndexer, VectorAssembler}
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.{GBTRegressor, LinearRegression, RandomForestRegressor}
 import org.apache.spark.ml.tuning.{CrossValidator, TrainValidationSplit}
@@ -17,11 +17,11 @@ import pro.dmitrypukhov.sparktrade.storage.Lake
  * Calculate candles from raw data for Candle mart
  */
 class CandlesProcessor extends BaseProcessor with Serializable {
-  /**
-   * Time window size in bars
-   */
-  val windowSize = 5
 
+  /**
+   * Transform raw data to candles
+   */
+  def updateCandlesFromRaw() = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
 
   /**
    * Add future values and diff values
@@ -29,7 +29,6 @@ class CandlesProcessor extends BaseProcessor with Serializable {
   private def withDiff(df: DataFrame) = {
     // Value columns
     val columns = Array("open", "high", "low", "close", "vol")
-    df.show(false)
     val timeWindow = Window
       .partitionBy("assetCode")
       .orderBy("datetime")
@@ -40,64 +39,57 @@ class CandlesProcessor extends BaseProcessor with Serializable {
     columns./:[DataFrame](df)((df, colName: String) => {
       val diffName = s"${colName}_diff"
       // Next value column for prediction
-      val nextName = s"${colName}_fut"
+      val futDiffName = s"${colName}_fut_diff"
       df.withColumn(diffName, col(colName) - lag(colName, lagSize).over(timeWindow))
-        .withColumn(nextName, lag(colName, futLagSize).over(timeWindow))
+        //df.withColumn(diffName, col(colName) - lag(colName, lagSize).over(timeWindow))
+        .withColumn(futDiffName, lag(colName, futLagSize).over(timeWindow) - col(colName))
+        .drop(colName)
     })
+      // Drop nans
+      .na.drop()
+
   }
 
   /**
-   * Create pipeline for preparation steps
+   * Features preparation stages for pipeline
    *
    * @return
    */
-  private def pipelineOf(predictor: PipelineStage): Pipeline = {
+  private val featuresStages: Array[PipelineStage] = Array[PipelineStage](
     // Encode asset with one hot encoder
-    val assetEncoder = new StringIndexer()
+    new StringIndexer()
       .setInputCol("assetCode")
-      .setOutputCol("assetCodeIndex")
+      .setOutputCol("assetCodeIndex"),
 
     // Combine ohlc to features vector
-    val featuresAssembler = new VectorAssembler()
-      .setInputCols(Array("open", "high", "low", "close", "vol"))
-      .setOutputCol("ohlcv_features")
+    new VectorAssembler()
+      .setInputCols(Array("open_diff", "high_diff", "low_diff", "close_diff", "vol_diff"))
+      .setOutputCol("features_assembled"),
 
     // Normalize ohlcv columns
-    val featuresScaler = new StandardScaler()
-      .setInputCol("ohlcv_features")
-      .setOutputCol("features")
+    new StandardScaler()
+      .setInputCol("features_assembled")
+      .setOutputCol("features_scaled"),
 
-//    // Combine labels to labels vector
-//    val labelsAssembler = new VectorAssembler()
-//      .setInputCols(Array("open_fut", "high_fut", "low_fut", "close_fut", "vol_fut"))
-//      .setOutputCol("ohlcv_labels")
+    new Normalizer()
+      .setInputCol("features_scaled")
+      .setOutputCol("features"),
+  )
 
-
-    // Normalize ohlcv labels columns
-    val labelsScaler = new StandardScaler()
-      .setInputCol("close_fut")
-      .setOutputCol("labels")
-
-    // Build pipeline for preparation stages
-    val pipeline = new Pipeline()
-      .setStages(Array(assetEncoder,
-        featuresAssembler,
-        featuresScaler,
-        //labelsAssembler,
-        //labelsScaler,
-        predictor))
-
-    pipeline
+  /**
+   * Whole batch process.
+   */
+  def process() = {
+    updateCandlesFromRaw()
+    predict()
   }
 
-  def prepare() = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
+
   /**
    * Read raw data from lake, transform to Candle entity, save to candles table.
    * todo: complete
    */
-  def process(): Unit = {
-    // Transform raw data to candles
-    prepare()
+  def predict(): Unit = {
 
     // Read candles dataset
     var candles = spark.read.table(Lake.candlesTableName)
@@ -113,18 +105,23 @@ class CandlesProcessor extends BaseProcessor with Serializable {
     val train = candles.orderBy("datetime").limit(Math.abs(cnt.toInt - (cnt * testRatio).toInt))
 
     // Build predictor, let it be Linear Regression
-    val predictor = new LinearRegression()
+    val predictor = new RandomForestRegressor()
       .setFeaturesCol("features")
-      .setLabelCol("close_fut")
-      .setMaxIter(10)
+      .setLabelCol("close_fut_diff")
+      //.setMaxIter(10)
+
+    // Create pipeline with preparation and predictor
+    val pipeline = new Pipeline()
+      .setStages(featuresStages :+ predictor)
+
 
     // Create pipeline with predictor and train
-    val model = pipelineOf(predictor)
+    val model = pipeline
       .fit(train)
 
     // Predict
     val predictions = model.transform(train)
-    predictions.show(false)
+    predictions.select("datetime", "close_diff", "close_fut_diff", "prediction").show(false)
 
     // ToDo: continue
   }
