@@ -1,12 +1,9 @@
 package pro.dmitrypukhov.sparktrade.lambda.batch
 
-import org.apache.spark.ml.{Pipeline, PipelineModel, PipelineStage, Predictor}
-import org.apache.spark.ml.feature.{Normalizer, OneHotEncoderEstimator, StandardScaler, StringIndexer, VectorAssembler}
-import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.regression.{GBTRegressor, LinearRegression, RandomForestRegressor}
-import org.apache.spark.ml.tuning.{CrossValidator, TrainValidationSplit}
-import org.apache.spark.ml.util.DefaultParamsWritable
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.ml.feature.{Normalizer, StandardScaler, StringIndexer, VectorAssembler}
+import org.apache.spark.ml.regression.RandomForestRegressor
+import org.apache.spark.ml.{Pipeline, PipelineStage}
+import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{lag, _}
 import pro.dmitrypukhov.sparktrade.datamarts.prices.Candle
@@ -21,7 +18,7 @@ class CandlesProcessor extends BaseProcessor with Serializable {
   /**
    * Transform raw data to candles
    */
-  def updateCandlesFromRaw() = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
+  def updateCandlesFromRaw(): Dataset[Candle] = super.prepare[Candle](Lake.rawFinamCandlesDir + "/*.csv", Lake.candlesTableName, converter.asCandle, "candles")
 
   /**
    * Add future values and diff values
@@ -79,7 +76,7 @@ class CandlesProcessor extends BaseProcessor with Serializable {
   /**
    * Whole batch process.
    */
-  def process() = {
+  def process(): Unit = {
     updateCandlesFromRaw()
     predict()
   }
@@ -101,7 +98,6 @@ class CandlesProcessor extends BaseProcessor with Serializable {
     // Split to train and test
     val cnt = candles.count()
     val testRatio = 0.3
-    val test = candles.orderBy(desc("datetime")).limit((cnt * testRatio).toInt)
     val train = candles.orderBy("datetime").limit(Math.abs(cnt.toInt - (cnt * testRatio).toInt))
 
     // Build predictor, let it be Linear Regression
